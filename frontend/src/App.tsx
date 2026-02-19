@@ -1,118 +1,40 @@
-import { useState, FormEvent } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 
 interface Business {
   place_id: string
-  name: string
+  business_name: string
   address: string
-  rating: number | null
+  phone_number: string | null
   website: string | null
-  matched_on: string
-  matched_text: string
-  relevance_score: number
+  reason: string
 }
 
 // Mock data for when backend is unavailable
 const MOCK_BUSINESSES: Business[] = [
   {
     place_id: 'mock_1',
-    name: 'Brew & Bytes Coffee',
+    business_name: 'Brew & Bytes Coffee',
     address: '123 Queen St W, Toronto, ON',
-    rating: 4.5,
+    phone_number: '647',
     website: 'https://brewandbytes.com',
-    matched_on: 'review',
-    matched_text: 'Great wifi and plenty of power outlets. Perfect spot for remote work with excellent coffee.',
-    relevance_score: 95.2
+    reason: 'why not',
   },
   {
     place_id: 'mock_2',
-    name: 'Tech Cafe Downtown',
-    address: '456 King St E, Toronto, ON',
-    rating: 4.7,
-    website: 'https://techcafe.ca',
-    matched_on: 'review',
-    matched_text: 'Fast internet, quiet atmosphere, and comfortable seating. Laptop-friendly with great espresso.',
-    relevance_score: 92.8
+    business_name: 'Brew & Bytes Coffee',
+    address: '123 Queen St W, Toronto, ON',
+    phone_number: '647',
+    website: 'https://brewandbytes.com',
+    reason: 'why not',
   },
   {
     place_id: 'mock_3',
-    name: 'The Study Lounge',
-    address: '789 Bloor St W, Toronto, ON',
-    rating: 4.3,
-    website: null,
-    matched_on: 'description',
-    matched_text: 'Coffee shop designed for students and remote workers with free high-speed wifi.',
-    relevance_score: 89.5
+    business_name: 'The Study Lounge',
+    address: '123 Queen St W, Toronto, ON',
+    phone_number: '647',
+    website: 'https://brewandbytes.com',
+    reason: 'why not',
   },
-  {
-    place_id: 'mock_4',
-    name: 'Espresso & Code',
-    address: '321 Yonge St, Toronto, ON',
-    rating: 4.6,
-    website: 'https://espressoandcode.com',
-    matched_on: 'review',
-    matched_text: 'Developer-friendly cafe with standing desks and blazing fast wifi. Great cold brew too!',
-    relevance_score: 94.1
-  },
-  {
-    place_id: 'mock_5',
-    name: 'Caffeine Terminal',
-    address: '654 Dundas St W, Toronto, ON',
-    rating: 4.4,
-    website: 'https://caffeineterminal.ca',
-    matched_on: 'review',
-    matched_text: 'Tech-themed coffee shop with excellent connectivity and a productive vibe.',
-    relevance_score: 88.7
-  },
-  {
-    place_id: 'mock_6',
-    name: 'The Digital Grind',
-    address: '987 College St, Toronto, ON',
-    rating: 4.2,
-    website: null,
-    matched_on: 'review',
-    matched_text: 'Quiet workspace with reliable wifi and fresh pastries. Lots of regulars working on laptops.',
-    relevance_score: 87.3
-  },
-  {
-    place_id: 'mock_7',
-    name: 'Java Junction',
-    address: '147 Spadina Ave, Toronto, ON',
-    rating: 4.8,
-    website: 'https://javajunction.ca',
-    matched_on: 'review',
-    matched_text: 'Amazing wifi speed, comfortable chairs, and the best lattes in town. Work-friendly environment.',
-    relevance_score: 96.4
-  },
-  {
-    place_id: 'mock_8',
-    name: 'Pixel & Pour',
-    address: '258 Queen St E, Toronto, ON',
-    rating: 4.5,
-    website: 'https://pixelandpour.com',
-    matched_on: 'description',
-    matched_text: 'Modern coffee shop catering to creatives and tech workers with fast internet and great coffee.',
-    relevance_score: 90.2
-  },
-  {
-    place_id: 'mock_9',
-    name: 'Remote Workers Haven',
-    address: '369 Harbord St, Toronto, ON',
-    rating: 4.7,
-    website: 'https://remotehaven.ca',
-    matched_on: 'review',
-    matched_text: 'Specifically designed for remote work with meeting rooms, printing services, and excellent wifi.',
-    relevance_score: 97.1
-  },
-  {
-    place_id: 'mock_10',
-    name: 'Code & Coffee Co.',
-    address: '741 Bathurst St, Toronto, ON',
-    rating: 4.3,
-    website: null,
-    matched_on: 'review',
-    matched_text: 'Programmer-friendly spot with multiple monitors allowed, fast wifi, and specialty coffee drinks.',
-    relevance_score: 91.6
-  }
 ]
 
 function App() {
@@ -122,7 +44,7 @@ function App() {
   const [searched, setSearched] = useState(false)
   const [usingMockData, setUsingMockData] = useState(false)
 
-  const handleSearch = async (e: FormEvent) => {
+  const handleSearch = async (e: SyntheticEvent) => {
     e.preventDefault()
     if (!query.trim()) return
 
@@ -131,11 +53,19 @@ function App() {
     setUsingMockData(false)
 
     try {
-      const res = await fetch(`http://localhost:8000/search?q=${encodeURIComponent(query)}&limit=20`, {
-        signal: AbortSignal.timeout(3000)
+      const request_body = {
+        query_string: query
+      }
+      const res = await fetch(`http://localhost:8000/query`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(1000000),
+        headers: {
+          'Content-Type': 'application/json', // This tells FastAPI to parse the body as JSON
+        },
+        body: JSON.stringify(request_body)
       })
       const data = await res.json()
-      setResults(data.results)
+      setResults(data.res)
     } catch (error) {
       console.warn('Backend unavailable, using mock data:', error)
       setResults(MOCK_BUSINESSES)
@@ -223,16 +153,13 @@ function App() {
                       Address
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rating
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Match
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Matched Text
+                      Phone Number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Website
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reason
                     </th>
                   </tr>
                 </thead>
@@ -241,7 +168,7 @@ function App() {
                     <tr key={business.place_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {business.name}
+                          {business.business_name}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -250,45 +177,19 @@ function App() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {business.rating ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-yellow-500">★</span>
-                            <span className="text-sm font-semibold text-gray-900">
-                              {business.rating.toFixed(1)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">N/A</span>
-                        )}
+                        <div className="text-sm text-gray-600 max-w-xs">
+                          {business.phone_number}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          
-                          <span className="text-xs text-gray-500">
-                            {business.relevance_score}%
-                          </span>
+                        <div className="text-sm text-gray-600 max-w-xs">
+                          {business.website}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-600 max-w-md italic">
-                          "{business.matched_text.substring(0, 100)}..."
+                          {business.reason}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {business.website ? (
-                          
-                          <a
-                            href={business.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                            >
-                          
-                            {business.name}
-                          </a>
-                        ) : (
-                          <span className="text-gray-400">N/A</span>
-                        )}
                       </td>
                     </tr>
                   ))}
