@@ -3,9 +3,23 @@ from my_langchain_agent import agent, BusinessRecordList
 from typing import List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Sample FastAPI App", version="0.1.0")
+
+origins = [
+    "http://localhost:5173",  # Local Vite dev server
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
+    allow_headers=["*"],  # Allows custom headers like Authorization
+)
 
 class ModelInput(BaseModel):
     query_string: str
