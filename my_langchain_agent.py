@@ -1,10 +1,12 @@
-from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import create_agent
 from test_search import search_businesses
 import psycopg2
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import List
 
 load_dotenv()
 
@@ -15,6 +17,15 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GEMINI_API_KEY"),
     temperature=0
 )
+class BusinessRecord(BaseModel):
+    business_name: str = Field(description="The name of the business")
+    address: str | None = Field(description="The address of the business")
+    phone_number: str | None = Field(description="The phone number of the business")
+    website: str | None = Field(description="The website of the business")
+    reason: str = Field(description="The reason why you think this business matches the user query. Should be a short sentence, but should show your own thinking")
+
+class BusinessRecordList(BaseModel):
+    res: List[BusinessRecord]
 
 @tool
 def vector_search(query: str) -> str:
@@ -53,7 +64,7 @@ def get_business_details(place_id: str) -> str:
 
 tools = [vector_search, filter_by_hours, get_business_details]
 
-agent = create_react_agent(llm, tools)
+agent = create_agent(llm, tools, response_format=BusinessRecordList)
 
 if __name__ == "__main__":
     query = input("What are you looking for? ")
@@ -62,10 +73,17 @@ if __name__ == "__main__":
             {"role": "system", "content": 
              """You are a business finder for businesses in Toronto. When the user gives you a query,
              you will provide upto the 10 most relevant businesses. You may do less, if the other businesses are not relevant to the query.
-             For each business you return the business name, the address, and why you think it matches the query."""},
+             For each business you return the business name, address, phone number, and website, and why you think it matches the query."""},
             {"role": "user", "content": query}
             ]
     })
     print("\n" + "="*50)
     print("FINAL ANSWER:")
-    print(result["messages"][-1].content[0]['text'])
+    result : BusinessRecordList = result["structured_response"]
+    for r in result.res:
+        print(f'Name: {r.business_name}')
+        print(f'Address: {r.address}')
+        print(f'Phone Number: {r.phone_number}')
+        print(f'Website: {r.website}')
+        print(f'Reason for selection: {r.reason}')
+        print("-"*20)
