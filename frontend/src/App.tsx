@@ -56,7 +56,7 @@ function App() {
       const request_body = {
         query_string: query
       }
-      const res = await fetch(`http://localhost:8000/query`, {
+      const res = await fetch(`https://business-search-812254520874.us-central1.run.app/query`, {
         method: 'POST',
         signal: AbortSignal.timeout(1000000),
         headers: {
