@@ -10,6 +10,7 @@ app = FastAPI(title="Sample FastAPI App", version="0.1.0")
 
 origins = [
     "http://localhost:5173",  # Local Vite dev server
+    "https://dashing-basbousa-9ecbf0.netlify.app"
 ]
 
 
