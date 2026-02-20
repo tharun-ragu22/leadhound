@@ -20,6 +20,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
     allow_headers=["*"],  # Allows custom headers like Authorization
+    max_age=3600
 )
 
 class ModelInput(BaseModel):
