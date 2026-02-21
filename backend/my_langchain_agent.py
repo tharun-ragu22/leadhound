@@ -7,6 +7,15 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List
+from google import genai
+
+class BoundingBox(BaseModel):
+    """Bounding box representing the northwest corner and southeast corner of a geographic location"""
+    nwLat: str = Field(description="latitude of the northwest corner of the bounding box")
+    nwLng: str = Field(description="longitude of the northwest corner of the bounding box")
+    seLat: str = Field(description="latitude of the southeast corner of the bounding box")
+    seLng: str = Field(description="longitude of the southeast corner of the bounding box")
+    
 
 load_dotenv()
 
@@ -49,6 +58,56 @@ def filter_by_hours(day: str) -> str:
     return str(results)
 
 @tool
+def filter_by_location(location: str) -> str:
+    """Filter business by location. Input should be a location as a string (e.g. Scarborough, Downtown Toronto, Morningside and Lawrence etc.)"""
+
+    client = genai.Client()
+
+    prompt = f"""
+    Given this location, create a bounding box containing it. You should give 2 corners, representing the northwest and southeast corners of the box.
+    The location given is in reference to the Greater Toronto Area, in Ontario, Canada, so your answers should be in reference to them as well.
+    The latitudes and longitudes you give should be correct to 4 decimal places.
+
+    Location:
+
+    {location}
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": BoundingBox.model_json_schema(),
+        },
+    )
+
+    bounding_box = BoundingBox.model_validate_json(response.text)
+
+    minLat = min(float(bounding_box.nwLat), float(bounding_box.seLat))
+    maxLat = max(float(bounding_box.nwLat), float(bounding_box.seLat))
+
+    minLng = min(float(bounding_box.nwLng), float(bounding_box.seLng))
+    maxLng = max(float(bounding_box.nwLng), float(bounding_box.seLng))
+
+    print(f"({minLat}, {minLng}), ({maxLat}, {maxLng})")
+
+    conn = psycopg2.connect(DB_URL)
+    cur = conn.cursor()
+    cur.execute(f"""
+        SELECT name 
+        FROM businesses 
+        WHERE lat BETWEEN {minLat} AND {maxLat}
+        AND lng BETWEEN {minLng} AND {maxLng}
+    """)
+    results = cur.fetchall()
+    cur.close()
+    conn.close()
+    return str(results)
+
+
+
+@tool
 def get_business_details(place_id: str) -> str:
     """Get full details for a specific business by its place_id."""
     conn = psycopg2.connect(DB_URL)
@@ -62,7 +121,7 @@ def get_business_details(place_id: str) -> str:
     conn.close()
     return str(result)
 
-tools = [vector_search, filter_by_hours, get_business_details]
+tools = [vector_search, filter_by_hours, filter_by_location, get_business_details]
 
 agent = create_agent(llm, tools, response_format=BusinessRecordList)
 

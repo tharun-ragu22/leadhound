@@ -104,7 +104,7 @@ function App() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try: 'coffee shop with good wifi for working' or 'pet store selling organic food'"
+              placeholder="Try: 'coffee shop with good wifi for working'"
               className="flex-1 px-6 py-4 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
@@ -183,7 +183,7 @@ function App() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 max-w-xs">
-                          {business.website}
+                          <a href={business.website ?? "/"}>Link</a>
                         </div>
                       </td>
                       <td className="px-6 py-4">
